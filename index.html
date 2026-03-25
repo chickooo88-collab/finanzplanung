@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RICKS – Finanzplaner</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#080808;--s1:#0f0f0f;--s2:#141414;--s3:#1a1a1a;--s4:#222;
+  --b1:#1e1e1e;--b2:#2a2a2a;--b3:#333;
+  --g:#22c55e;--g2:#16a34a;--g3:rgba(34,197,94,.08);--g4:rgba(34,197,94,.15);
+  --r:#f87171;--r2:rgba(248,113,113,.08);
+  --o:#fbbf24;--o2:rgba(251,191,36,.08);
+  --d:#888;--d2:#555;--d3:#333;
+  --text:#e4e4e4;--text2:#aaa;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --rad:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sb{background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid var(--b1)}
+.sb-logo-name{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--g);letter-spacing:3px}
+.sb-logo-sub{font-size:9px;color:var(--d2);margin-top:2px;letter-spacing:1.5px;text-transform:uppercase}
+.sb-yr{padding:10px 16px;border-bottom:1px solid var(--b1)}
+.sb-yr-lbl{font-size:9px;color:var(--d2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.ybtns{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.ybtn{padding:6px 2px;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--d);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .14s;text-align:center;width:100%}
+.ybtn.active{background:var(--g);border-color:var(--g);color:#000;font-weight:600}
+.sb-nav{flex:1;padding:8px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--d);font-size:11px;font-weight:500;letter-spacing:.3px;transition:all .14s;margin-bottom:1px;white-space:nowrap}
+.ni:hover{background:var(--s2);color:var(--text)}
+.ni.active{background:var(--g3);color:var(--g);border-left:2px solid var(--g);padding-left:8px}
+.ni-icon{flex-shrink:0;opacity:.6;display:flex;align-items:center}
+.ni.active .ni-icon{opacity:1}
+.ni-long{display:inline}
+.ni-short{display:none}
+.sb-foot{padding:12px 16px;border-top:1px solid var(--b1)}
+.sb-foot-btn{width:100%;padding:7px;border-radius:6px;border:1px solid var(--b2);background:transparent;color:var(--d2);font-family:var(--sans);font-size:10px;cursor:pointer;transition:all .14s}
+.sb-foot-btn:hover{border-color:var(--g);color:var(--g)}
+
+/* ── MAIN ── */
+.main-wrap{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+.topbar{padding:13px 26px;border-bottom:1px solid var(--b1);background:var(--s1);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.tb-title{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--g)}
+.tb-sub{font-size:10px;color:var(--d2);margin-top:1px}
+.tb-year{font-family:var(--mono);font-size:11px;color:var(--d2)}
+.content{padding:22px 26px;flex:1}
+.page{display:none}
+.page.active{display:block;animation:fi .14s ease}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+
+/* ── KPI ── */
+.kpi{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rad);padding:14px}
+.kpi-lbl{font-size:9px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--d2);margin-bottom:6px}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:500}
+.kpi-sub{font-size:10px;color:var(--d2);margin-top:3px}
+.g{color:var(--g)}.r{color:var(--r)}.o{color:var(--o)}.d{color:var(--d)}
+
+/* ── PANEL ── */
+.panel{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rad);overflow:hidden;margin-bottom:12px}
+.ph{padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ph-title{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--d);letter-spacing:.8px;text-transform:uppercase}
+.pb{padding:14px}
+
+/* ── ROW ── */
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--b1);font-size:12px}
+.row:last-child{border-bottom:none}
+.row.bold{font-weight:600}
+.row.total{border-top:1px solid var(--b2);padding-top:9px;margin-top:3px}
+.row .lbl{color:var(--text2)}
+.row.bold .lbl{color:var(--text)}
+.row .val{font-family:var(--mono);font-size:12px}
+.row.big .val{font-size:16px}
+
+/* ── SECTION LABEL ── */
+.slbl{font-size:9px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;color:var(--d2);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:'';flex:1;height:1px;background:var(--b1)}
+.slbl:first-child{margin-top:0}
+
+/* ── FORM ── */
+.field{margin-bottom:10px}
+.field label{display:block;font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--d2);margin-bottom:4px}
+.inp{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;outline:none;transition:border-color .14s}
+.inp:focus{border-color:var(--g)}
+.inp2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inp3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ── RANGE ── */
+.range-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.range-top label{font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--d2)}
+.range-top span{font-family:var(--mono);font-size:13px;color:var(--g)}
+input[type=range]{width:100%;-webkit-appearance:none;height:2px;background:var(--b2);border-radius:1px;outline:none;cursor:pointer;margin:4px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--g);border-radius:50%;cursor:pointer}
+.range-ends{display:flex;justify-content:space-between;font-size:9px;color:var(--d3)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:7px 12px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--d2);border-bottom:1px solid var(--b1)}
+.tbl th.tr,.tbl td.tr{text-align:right}
+.tbl td{padding:8px 12px;font-size:12px;border-bottom:1px solid var(--b1);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.012)}
+.tbl td.mono{font-family:var(--mono)}
+.tbl td.muted{color:var(--d2);font-size:10px}
+.tbl-foot td{font-family:var(--mono);font-weight:600;font-size:12px;border-top:1px solid var(--b2);padding-top:8px}
+
+/* ── EDITABLE ── */
+.ec{cursor:text;border-bottom:1px dashed var(--d3);padding:1px 2px;border-radius:2px;display:inline-block;min-width:18px;transition:border-color .12s}
+.ec:hover{border-color:var(--g)}
+.ec:focus{outline:none;border-color:var(--g);background:rgba(34,197,94,.05)}
+
+/* ── BUTTONS ── */
+.btn{padding:5px 12px;border-radius:5px;border:none;font-family:var(--sans);font-size:10px;font-weight:600;cursor:pointer;transition:all .14s;letter-spacing:.4px}
+.btn-g{background:var(--g);color:#000}.btn-g:hover{opacity:.85}
+.btn-ghost{background:transparent;border:1px solid var(--b2);color:var(--d)}.btn-ghost:hover{border-color:var(--g);color:var(--g)}
+.btn-del{background:transparent;border:none;color:var(--d3);cursor:pointer;padding:2px 5px;font-size:12px;transition:color .12s}.btn-del:hover{color:var(--r)}
+.btn-add{width:100%;padding:8px;border:1px dashed var(--b2);border-radius:6px;background:transparent;color:var(--d2);font-family:var(--sans);font-size:10px;cursor:pointer;transition:all .14s;margin-top:4px}
+.btn-add:hover{border-color:var(--g);color:var(--g)}
+
+/* ── BADGE ── */
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase}
+.badge-g{background:var(--g3);color:var(--g)}
+.badge-o{background:var(--o2);color:var(--o)}
+.badge-d{background:rgba(255,255,255,.05);color:var(--d)}
+
+/* ── CHART ── */
+.chart-box{background:var(--s1);border:1px solid var(--b1);border-radius:var(--rad);padding:14px;margin-bottom:12px}
+.chart-lbl{font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--d2);margin-bottom:10px}
+
+/* ── PROGRESS ── */
+.prog{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin:5px 0}
+.prog-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* ── INFO BOX ── */
+.info-box{padding:9px 12px;border-radius:6px;font-size:11px;line-height:1.5;margin-top:8px}
+.info-green{background:var(--g3);border:1px solid rgba(34,197,94,.2);color:var(--g)}
+.info-orange{background:var(--o2);border:1px solid rgba(251,191,36,.2);color:var(--o)}
+.info-red{background:var(--r2);border:1px solid rgba(248,113,113,.2);color:var(--r)}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .16s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--b3);border-radius:10px;padding:22px;width:400px;max-width:94vw}
+.modal-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--g);margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:18px;right:18px;z-index:999;background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:9px 16px;font-size:12px;font-weight:500;transform:translateY(10px);opacity:0;transition:all .16s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+.toast.ok{border-color:var(--g)}.toast.err{border-color:var(--r)}
+hr{border:none;border-top:1px solid var(--b1);margin:10px 0}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════ */
+
+/* Tablet */
+@media(max-width:960px){
+  .app{grid-template-columns:170px 1fr}
+  .g4{grid-template-columns:1fr 1fr}
+  .g21,.g12{grid-template-columns:1fr}
+}
+
+/* Mobile: Sidebar → Bottom Navigation */
+@media(max-width:700px){
+  /* Das Grid aufheben – Main nimmt volle Breite */
+  .app{display:block}
+  .main-wrap{padding-bottom:76px}
+  .topbar{padding:10px 14px;position:sticky;top:0;z-index:20}
+  .tb-title{font-size:13px}
+  .content{padding:12px 10px}
+
+  /* Sidebar wird zur fixen Bottom-Bar */
+  .sb{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    top:auto;height:auto;
+    display:flex;flex-direction:row;align-items:stretch;
+    z-index:100;
+    border-top:1px solid var(--b2);
+    border-right:none;
+    background:var(--s1);
+    box-shadow:0 -2px 12px rgba(0,0,0,.4);
+  }
+
+  /* Logo + Footer ausblenden */
+  .sb-logo,.sb-foot{display:none}
+
+  /* Jahresbuttons: links in der Bar, 2×2 */
+  .sb-yr{
+    flex-shrink:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:5px 8px;
+    border-bottom:none;
+    border-right:1px solid var(--b2);
+    min-width:96px;
+  }
+  .sb-yr-lbl{display:none}
+  .ybtns{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+  .ybtn{font-size:10px;padding:4px 3px;border-radius:4px}
+
+  /* Nav: scrollbare Icon-Leiste */
+  .sb-nav{
+    flex:1;
+    display:flex;flex-direction:row;align-items:center;
+    padding:5px 4px 7px;
+    gap:2px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .sb-nav::-webkit-scrollbar{display:none}
+
+  .ni{
+    flex-direction:column;
+    gap:2px;
+    padding:5px 7px;
+    min-width:50px;
+    max-width:64px;
+    text-align:center;
+    border-radius:8px;
+    flex-shrink:0;
+    margin-bottom:0;
+    border-left:none !important;
+    padding-left:7px !important;
+    white-space:nowrap;
+  }
+  .ni.active{
+    background:var(--g3);
+    color:var(--g);
+    border-left:none !important;
+  }
+  .ni-icon{opacity:.65;justify-content:center}
+  .ni.active .ni-icon{opacity:1}
+  .ni-icon svg{width:20px;height:20px}
+  .ni-long{display:none}
+  .ni-short{display:block;font-size:8px;line-height:1.2;margin-top:1px}
+
+  /* Grids */
+  .g4,.g3{grid-template-columns:1fr 1fr}
+  .g2,.g12,.g21{grid-template-columns:1fr}
+  .inp2,.inp3{grid-template-columns:1fr}
+
+  /* Tabellen scrollbar */
+  .tbl-wrap-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:480px}
+
+  /* KPI kleiner */
+  .kpi-val{font-size:17px !important}
+  .modal{width:95vw;padding:16px}
+  .toast{bottom:82px}
+}
+
+/* Sehr kleine Phones */
+@media(max-width:380px){
+  .sb-yr{min-width:82px;padding:4px 6px}
+  .ni{min-width:44px;padding:4px 5px}
+  .ni-short{font-size:7px}
+  .ybtn{font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-g" onclick="modalSave()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="sb-logo-name">RICKS</div>
+    <div class="sb-logo-sub">Finanzplaner · Wien</div>
+  </div>
+  <div class="sb-yr">
+    <div class="sb-yr-lbl">Planjahr</div>
+    <div class="ybtns">
+      <button class="ybtn active" onclick="setYear(2026,this)">2026</button>
+      <button class="ybtn" onclick="setYear(2027,this)">2027</button>
+      <button class="ybtn" onclick="setYear(2028,this)">2028</button>
+      <button class="ybtn" onclick="setYear(2029,this)">2029</button>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="ni active" onclick="goPage('dashboard',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="ni-long">Dashboard</span><span class="ni-short">Start</span></div>
+    <div class="ni" onclick="goPage('einnahmen',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2M12 8V7m0 1v8m0 1v1"/></svg></span><span class="ni-long">Einnahmen</span><span class="ni-short">Einnahmen</span></div>
+    <div class="ni" onclick="goPage('ausgaben',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></span><span class="ni-long">Ausgaben</span><span class="ni-short">Ausgaben</span></div>
+    <div class="ni" onclick="goPage('afa',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></span><span class="ni-long">Investitionen & AfA</span><span class="ni-short">AfA</span></div>
+    <div class="ni" onclick="goPage('steuer',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-4.5.5h.01m4 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg></span><span class="ni-long">Steuern & Abgaben</span><span class="ni-short">Steuern</span></div>
+    <div class="ni" onclick="goPage('jahresabschluss',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></span><span class="ni-long">Jahresabschluss</span><span class="ni-short">Abschluss</span></div>
+    <div class="ni" onclick="goPage('vergleich',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></span><span class="ni-long">Jahresvergleich</span><span class="ni-short">Vergleich</span></div>
+    <div class="ni" onclick="goPage('privat',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg></span><span class="ni-long">Privatausgaben</span><span class="ni-short">Privat</span></div>
+    <div class="ni" onclick="goPage('kontostand',this)"><span class="ni-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 16h.01M11 16h.01M3 6h18a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1z"/></svg></span><span class="ni-long">Kontostand</span><span class="ni-short">Konten</span></div>
+  </nav>
+  <div class="sb-foot"><button class="sb-foot-btn" onclick="exportData()">↓ Exportieren</button></div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrap">
+  <div class="topbar">
+    <div>
+      <div class="tb-title" id="tb-title">Dashboard</div>
+      <div class="tb-sub" id="tb-sub">Gesamtübersicht · live berechnet</div>
+    </div>
+    <div class="tb-year" id="tb-year">2026</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="g4" id="dash-kpis"></div>
+      <div class="g21">
+        <div>
+          <div class="chart-box">
+            <div class="chart-lbl">Cashflow · Einnahmen vs. Ausgaben</div>
+            <canvas id="ch-cf" height="130"></canvas>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Monatliche Liquidität</div></div>
+            <div class="pb" id="dash-liq"></div>
+          </div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Break-Even</div></div>
+            <div class="pb" id="dash-be"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ EINNAHMEN ══ -->
+    <div id="page-einnahmen" class="page">
+      <div class="g12">
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Kapazität & Preise</div></div>
+            <div class="pb">
+              <div class="slbl">Training Room</div>
+              <div class="inp2">
+                <div class="field"><label>Einheiten / Woche</label><input class="inp" type="number" id="e-eh" value="14" min="1" oninput="recalc()"></div>
+                <div class="field"><label>Max. Plätze / Einheit</label><input class="inp" type="number" id="e-pl" value="8" min="1" oninput="recalc()"></div>
+              </div>
+              <div class="field">
+                <div class="range-top"><label>Auslastung</label><span id="e-ausl-v">60%</span></div>
+                <input type="range" min="0" max="100" value="60" id="e-ausl" oninput="rv('e-ausl','e-ausl-v','%');recalc()">
+                <div class="range-ends"><span>0%</span><span>100%</span></div>
+              </div>
+              <div class="inp2">
+                <div class="field"><label>Preis Einzelstunde (€)</label><input class="inp" type="number" id="e-peinzel" value="18" oninput="recalc()"></div>
+                <div class="field"><label>10er Block (€)</label><input class="inp" type="number" id="e-pblock" value="155" oninput="recalc()"></div>
+              </div>
+              <div class="inp2">
+                <div class="field"><label>Jahresabo (€/Jahr)</label><input class="inp" type="number" id="e-pabo" value="540" oninput="recalc()"></div>
+                <div class="field">
+                  <div class="range-top"><label>Abo-Anteil</label><span id="e-abo-v">30%</span></div>
+                  <input type="range" min="0" max="100" value="30" id="e-abo" oninput="rv('e-abo','e-abo-v','%');recalc()">
+                </div>
+              </div>
+              <div class="slbl">Zusatzeinnahmen (€ netto/Monat)</div>
+              <div class="inp2">
+                <div class="field"><label>Silent Room</label><input class="inp" type="number" id="e-silent" value="250" oninput="recalc()"></div>
+                <div class="field"><label>Sa-Challenges</label><input class="inp" type="number" id="e-chal" value="180" oninput="recalc()"></div>
+              </div>
+              <div class="inp2">
+                <div class="field"><label>Lounge / Getränke</label><input class="inp" type="number" id="e-lounge" value="200" oninput="recalc()"></div>
+                <div class="field"><label>Sonstiges</label><input class="inp" type="number" id="e-sonstiges" value="0" oninput="recalc()"></div>
+              </div>
+              <div class="slbl">Betrieb</div>
+              <div class="field">
+                <label>Aktive Betriebsmonate im Jahr</label>
+                <input class="inp" type="number" id="e-mo" value="4" min="1" max="12" oninput="recalc()">
+                <div style="font-size:10px;color:var(--d2);margin-top:4px">Gilt für Einnahmen und Ausgaben. 2026 = Sep–Dez = 4 Monate.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Vorschau</div></div>
+            <div class="pb" id="ein-prev"></div>
+          </div>
+          <div class="chart-box">
+            <div class="chart-lbl">Einnahmequellen / Monat</div>
+            <canvas id="ch-ein" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AUSGABEN ══ -->
+    <div id="page-ausgaben" class="page">
+      <div class="g2">
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Fixkosten</div><button class="btn btn-ghost" onclick="openModal('fk')">+ Neu</button></div>
+            <table class="tbl"><thead><tr><th>Position</th><th>Kat.</th><th class="tr">€/Mo</th><th></th></tr></thead>
+            <tbody id="fk-tbody"></tbody>
+            <tfoot><tr class="tbl-foot"><td>Gesamt</td><td></td><td class="tr g" id="fk-sum">–</td><td></td></tr></tfoot></table>
+            <button class="btn-add" onclick="openModal('fk')">+ Fixkosten hinzufügen</button>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Variable Kosten</div><button class="btn btn-ghost" onclick="openModal('vk')">+ Neu</button></div>
+            <table class="tbl"><thead><tr><th>Position</th><th>Kat.</th><th class="tr">€/Mo</th><th></th></tr></thead>
+            <tbody id="vk-tbody"></tbody>
+            <tfoot><tr class="tbl-foot"><td>Gesamt</td><td></td><td class="tr r" id="vk-sum">–</td><td></td></tr></tfoot></table>
+            <button class="btn-add" onclick="openModal('vk')">+ Variable Kosten hinzufügen</button>
+          </div>
+          <div class="panel"><div class="ph"><div class="ph-title">Zusammenfassung</div></div><div class="pb" id="ausg-sum"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AfA ══ -->
+    <div id="page-afa" class="page">
+      <div class="g3" id="afa-kpis" style="margin-bottom:12px"></div>
+      <div class="panel">
+        <div class="ph" style="flex-wrap:wrap;gap:6px">
+          <div class="ph-title">Anlageverzeichnis</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select id="afa-filter" class="inp" style="width:110px;padding:3px 7px;font-size:10px" onchange="renderAfA()">
+              <option value="alle">Alle Typen</option>
+              <option value="afa">AfA linear</option>
+              <option value="gwg">GWG</option>
+              <option value="sofort">Sofortaufwand</option>
+            </select>
+            <select id="afa-sort" class="inp" style="width:110px;padding:3px 7px;font-size:10px" onchange="renderAfA()">
+              <option value="datum">Datum</option>
+              <option value="netto-desc">Betrag ↓</option>
+              <option value="netto-asc">Betrag ↑</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <button class="btn btn-g" onclick="openModal('anlage')">+ Anlage</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Bezeichnung</th><th>Kaufdatum</th><th>Typ</th><th class="tr">Netto €</th><th class="tr">ND</th><th class="tr">AfA <span id="afa-yr-lbl">2026</span></th><th class="tr">Buchwert</th><th></th></tr></thead>
+            <tbody id="afa-tbody"></tbody>
+            <tfoot><tr class="tbl-foot"><td colspan="5">Steuerlicher Aufwand gesamt</td><td class="tr o" id="afa-sum">–</td><td></td><td></td></tr></tfoot>
+          </table>
+        </div>
+        <button class="btn-add" onclick="openModal('anlage')">+ Neue Investition erfassen</button>
+      </div>
+      <div class="g3">
+        <div class="panel"><div class="pb"><span class="badge badge-g">GWG &lt; € 1.000</span><div style="font-size:11px;color:var(--text2);margin-top:7px;line-height:1.6">Sofortabsetzung 100% im Anschaffungsjahr.</div></div></div>
+        <div class="panel"><div class="pb"><span class="badge badge-o">AfA linear</span><div style="font-size:11px;color:var(--text2);margin-top:7px;line-height:1.6">Lineare Abschreibung. <span style="color:var(--o)">Österreich:</span> monatsgenaue AfA ab Kauf.</div></div></div>
+        <div class="panel"><div class="pb"><span class="badge badge-d">Sofortaufwand</span><div style="font-size:11px;color:var(--text2);margin-top:7px;line-height:1.6">100% sofort als Betriebsausgabe absetzbar.</div></div></div>
+      </div>
+    </div>
+
+    <!-- ══ STEUERN ══ -->
+    <div id="page-steuer" class="page">
+      <div class="g2">
+        <div>
+          <div class="panel"><div class="ph"><div class="ph-title">Umsatzsteuer (USt)</div></div><div class="pb" id="ust-panel"></div></div>
+          <div class="panel"><div class="ph"><div class="ph-title">SVS – Sozialversicherung (GSVG)</div></div><div class="pb" id="svs-panel"></div></div>
+          <div class="panel"><div class="ph"><div class="ph-title">SVS Beitragsgruppen</div></div><table class="tbl" id="svs-tbl"></table></div>
+        </div>
+        <div>
+          <div class="panel"><div class="ph"><div class="ph-title">Einkommensteuer (§ 33 EStG)</div></div><div class="pb" id="est-panel"></div></div>
+          <div class="panel"><div class="ph"><div class="ph-title">Alle Abgaben im Überblick</div></div><div class="pb" id="all-taxes"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ JAHRESABSCHLUSS ══ -->
+    <div id="page-jahresabschluss" class="page">
+      <div class="g2">
+        <div class="panel"><div class="ph"><div class="ph-title">Gewinn- & Verlustrechnung</div></div><div class="pb" id="guv-panel"></div></div>
+        <div>
+          <div class="panel"><div class="ph"><div class="ph-title">Ergebnis & Rücklagen</div></div><div class="pb" id="result-panel"></div></div>
+          <div class="chart-box"><div class="chart-lbl">Gewinnverteilung</div><canvas id="ch-guv" height="160"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VERGLEICH ══ -->
+    <div id="page-vergleich" class="page">
+      <div class="info-box info-orange" style="margin-bottom:14px;font-size:11px">⚡ Verluste werden als Verlustvortrag ins Folgejahr übertragen. AfA läuft über alle Jahre korrekt weiter.</div>
+      <div id="vergl-cols" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px"></div>
+      <div class="chart-box"><div class="chart-lbl">2026 – 2029 Vergleich</div><canvas id="ch-vergl" height="100"></canvas></div>
+    </div>
+
+    <!-- ══ PRIVATAUSGABEN ══ -->
+    <div id="page-privat" class="page">
+      <div class="g2">
+        <div>
+          <div class="panel">
+            <div class="ph"><div class="ph-title">Private Ausgaben</div><button class="btn btn-ghost" onclick="openModal('privat')">+ Hinzufügen</button></div>
+            <table class="tbl"><thead><tr><th>Position</th><th>Kategorie</th><th class="tr">€ / Monat</th><th></th></tr></thead>
+            <tbody id="priv-tbody"></tbody>
+            <tfoot><tr class="tbl-foot"><td>Gesamt</td><td></td><td class="tr r" id="priv-sum">–</td><td></td></tr></tfoot></table>
+            <button class="btn-add" onclick="openModal('privat')">+ Ausgabe hinzufügen</button>
+          </div>
+        </div>
+        <div>
+          <div class="panel"><div class="ph"><div class="ph-title">Zusammenfassung</div></div><div class="pb" id="priv-summary"></div></div>
+          <div class="chart-box"><div class="chart-lbl">Kategorien</div><canvas id="ch-priv" height="160"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ KONTOSTAND ══ -->
+    <div id="page-kontostand" class="page">
+      <div class="g3" style="margin-bottom:14px">
+        <div class="kpi"><div class="kpi-lbl">Girokonto (Start)</div><div class="kpi-val g" id="ks-giro-start">€ 2.500</div><div class="kpi-sub">Privatkonto</div></div>
+        <div class="kpi"><div class="kpi-lbl">Geschäftskonto (Start)</div><div class="kpi-val g" id="ks-biz-start">€ 28.000</div><div class="kpi-sub">Betriebskonto</div></div>
+        <div class="kpi"><div class="kpi-lbl">Steuerkonto (Start)</div><div class="kpi-val d" id="ks-tax-start">€ 0</div><div class="kpi-sub">SVS + ESt Rücklagen</div></div>
+      </div>
+      <div class="panel" style="margin-bottom:14px">
+        <div class="ph"><div class="ph-title">Startguthaben & Aufteilung</div></div>
+        <div class="pb">
+          <div class="inp3">
+            <div class="field"><label>Girokonto Start (€)</label><input class="inp" type="number" id="ks-giro-inp" value="2500" oninput="renderKontostand()"></div>
+            <div class="field"><label>Geschäftskonto Start (€)</label><input class="inp" type="number" id="ks-biz-inp" value="28000" oninput="renderKontostand()"></div>
+            <div class="field"><label>Steuerkonto Start (€)</label><input class="inp" type="number" id="ks-tax-inp" value="0" oninput="renderKontostand()"></div>
+          </div>
+          <div class="field" style="margin-top:4px">
+            <div class="range-top"><label>Anteil Einnahmen → Girokonto</label><span id="ks-split-v">70%</span></div>
+            <input type="range" min="0" max="100" value="70" id="ks-split" oninput="rv('ks-split','ks-split-v','%');renderKontostand()">
+            <div style="font-size:10px;color:var(--d2);margin-top:3px">Anteil des Überschusses vom Geschäftskonto → Girokonto</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:14px">
+        <div class="ph">
+          <div class="ph-title">Monatsvorschau</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ks-sel-mo" class="inp" style="width:90px;padding:4px 8px" onchange="renderKontostand()">
+              <option value="1">Jänner</option><option value="2">Februar</option><option value="3">März</option>
+              <option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option>
+              <option value="7">Juli</option><option value="8">August</option><option value="9" selected>September</option>
+              <option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option>
+            </select>
+            <select id="ks-sel-yr" class="inp" style="width:80px;padding:4px 8px" onchange="renderKontostand()">
+              <option value="2026" selected>2026</option><option value="2027">2027</option>
+              <option value="2028">2028</option><option value="2029">2029</option>
+            </select>
+          </div>
+        </div>
+        <div class="pb" id="ks-preview"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-lbl">Kontostandentwicklung (alle Jahre, ab Jul 2026)</div>
+        <canvas id="ch-ks" height="110"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main-wrap -->
+</div><!-- /app -->
+
+<script>
+
+'use strict';
+// ═══════════════════════════════════════════════════
+// DATEN & STATE
+// ═══════════════════════════════════════════════════
+const KEY = 'ricks_v12';
+let year = 2026;
+let charts = {};
+
+// ── STANDARDDATEN ──
+const defState = () => ({
+  ein: { eh:14, pl:8, ausl:60, peinzel:18, pblock:155, pabo:540, aboAnteil:30,
+         silent:250, chal:180, lounge:200, sonstiges:0, mo:4 },
+  fk: [
+    {id:1,  name:'Miete',                 kat:'Räumlichkeiten', netto:1320, mwst:20},
+    {id:2,  name:'Strom',                 kat:'Energie',        netto:120,  mwst:20},
+    {id:3,  name:'Wasser',                kat:'Energie',        netto:25,   mwst:20},
+    {id:4,  name:'Heizung',               kat:'Energie',        netto:50,   mwst:20},
+    {id:5,  name:'Internet',              kat:'Kommunikation',  netto:30,   mwst:20},
+    {id:6,  name:'Telefon',               kat:'Kommunikation',  netto:4,    mwst:20},
+    {id:7,  name:'Betriebshaftpflicht',   kat:'Versicherung',   netto:25,   mwst:0},
+    {id:8,  name:'Inventarversicherung',  kat:'Versicherung',   netto:20,   mwst:0},
+    {id:9,  name:'Bankspesen',            kat:'Verwaltung',     netto:15,   mwst:20},
+  ],
+  vk: [
+    {id:1, name:'Marketing',              kat:'Werbung',    netto:100, mwst:20},
+    {id:2, name:'Reinigung / Material',   kat:'Betrieb',    netto:50,  mwst:20},
+    {id:3, name:'Software / Tools',       kat:'IT',         netto:30,  mwst:20},
+    {id:4, name:'Fortbildung',            kat:'Personal',   netto:50,  mwst:20},
+  ],
+  privat: [
+    {id:1,  name:'Miete & Garage',           kat:'Wohnen',       betrag:310.61},
+    {id:2,  name:'Fernwärme',                kat:'Wohnen',       betrag:41.25},
+    {id:3,  name:'Internet',                 kat:'Kommunikation',betrag:18.81},
+    {id:4,  name:'Spotify',                  kat:'Streaming',    betrag:7.00},
+    {id:5,  name:'Netflix',                  kat:'Streaming',    betrag:7.00},
+    {id:6,  name:'Disney+',                  kat:'Streaming',    betrag:7.00},
+    {id:7,  name:'Strom Einzug',             kat:'Wohnen',       betrag:24.60},
+    {id:8,  name:'ORF',                      kat:'Medien',       betrag:15.30},
+    {id:9,  name:'Einkäufe',                 kat:'Lebenshaltung',betrag:511.14},
+    {id:10, name:'Rechtsschutzversicherung', kat:'Versicherung', betrag:11.49},
+    {id:11, name:'Haushaltsversicherung',    kat:'Versicherung', betrag:8.58},
+    {id:12, name:'KFZ Versicherung',         kat:'Versicherung', betrag:37.25},
+    {id:13, name:'Handy',                    kat:'Kommunikation',betrag:9.90},
+    {id:14, name:'Amazon Prime',             kat:'Streaming',    betrag:8.99},
+    {id:15, name:'Generali',                 kat:'Versicherung', betrag:12.27},
+    {id:16, name:'Uniqa',                    kat:'Versicherung', betrag:98.82},
+    {id:17, name:'Bausparer',                kat:'Sparen',       betrag:75.00},
+    {id:18, name:'Wertpapierdepot',          kat:'Sparen',       betrag:60.00},
+    {id:19, name:'Golddepot',                kat:'Sparen',       betrag:100.00},
+    {id:20, name:'Trade Sparpläne',          kat:'Sparen',       betrag:600.00},
+    {id:21, name:'Bausparer Luis',           kat:'Sparen',       betrag:100.00},
+  ],
+  anlagen: [
+    // SANIERUNG
+    {id:1,  name:'Boden verlegen',                        datum:'2026-07-01', netto:2916.67, nd:15, kat:'afa'},
+    {id:2,  name:'Waende verspachteln und ausmalen',      datum:'2026-07-01', netto:2916.67, nd:10, kat:'afa'},
+    {id:3,  name:'Beleuchtung installieren',              datum:'2026-07-01', netto:833.33,  nd:10, kat:'afa'},
+    {id:4,  name:'Rigpiswand aufstellen',                 datum:'2026-07-01', netto:2500.00, nd:15, kat:'afa'},
+    {id:5,  name:'Deckenplatten (75 Stk)',                datum:'2026-07-01', netto:249.38,  nd:10, kat:'afa'},
+    {id:6,  name:'Sockelleiste 27 Lfm',                   datum:'2026-07-01', netto:82.41,   nd:10, kat:'gwg'},
+    {id:7,  name:'Laminat (80 Stk)',                      datum:'2026-07-01', netto:866.67,  nd:15, kat:'afa'},
+    {id:8,  name:'Wandfarbe (5 Eimer)',                   datum:'2026-07-01', netto:166.67,  nd:1,  kat:'gwg'},
+    {id:9,  name:'Tuerenlack (3 Dosen)',                  datum:'2026-07-01', netto:150.00,  nd:1,  kat:'gwg'},
+    {id:10, name:'Wandpanelle (5 Stk)',                   datum:'2026-07-01', netto:1041.67, nd:10, kat:'afa'},
+    {id:11, name:'Sonstiges Zubehoer',                    datum:'2026-07-01', netto:291.67,  nd:1,  kat:'sofort'},
+    // MARKETING
+    {id:12, name:'Aussenwerbung-Schild',                  datum:'2026-08-01', netto:291.67,  nd:5,  kat:'afa'},
+    {id:13, name:'Smiirl Instagram Counter',              datum:'2026-08-01', netto:249.17,  nd:3,  kat:'gwg'},
+    {id:14, name:'Folie Aussenwerbung',                   datum:'2026-08-01', netto:241.67,  nd:3,  kat:'gwg'},
+    // GERAETE
+    {id:15, name:'Rudergeraet Baltic Rower Pro',          datum:'2026-08-01', netto:832.50,  nd:7,  kat:'gwg'},
+    {id:16, name:'Taurus Run-X Curved Treadmill',         datum:'2026-08-01', netto:2915.83, nd:7,  kat:'afa'},
+    {id:17, name:'Concept2 SkiErg PM5',                   datum:'2026-08-01', netto:866.67,  nd:7,  kat:'gwg'},
+    {id:18, name:'Taurus Springseil Speed Rope (10 Stk)', datum:'2026-08-01', netto:24.17,   nd:2,  kat:'gwg'},
+    {id:19, name:'Centr x Hyrox Zielscheibe',             datum:'2026-08-01', netto:83.29,   nd:5,  kat:'gwg'},
+    {id:20, name:'Wall Ball 4kg (2 Stk)',                  datum:'2026-08-01', netto:101.58,  nd:5,  kat:'gwg'},
+    {id:21, name:'Wall Ball 6kg (2 Stk)',                  datum:'2026-08-01', netto:118.25,  nd:5,  kat:'gwg'},
+    {id:22, name:'Wall Ball 9kg (2 Stk)',                  datum:'2026-08-01', netto:134.92,  nd:5,  kat:'gwg'},
+    {id:23, name:'Kettlebell Set 4-28kg (je 2 Stk)',       datum:'2026-08-01', netto:581.50,  nd:10, kat:'afa'},
+    {id:24, name:'Sandbag Set 10/20/30kg (je 2 Stk)',      datum:'2026-08-01', netto:507.96,  nd:7,  kat:'afa'},
+    {id:25, name:'Nike Hantelset bis 22,5kg',              datum:'2026-08-01', netto:1195.00, nd:10, kat:'afa'},
+    {id:26, name:'Hantelscheiben Set 1,25-25kg',           datum:'2026-08-01', netto:883.75,  nd:10, kat:'afa'},
+    {id:27, name:'Bodenschutzmatten 100x100 (40 Stk)',     datum:'2026-08-01', netto:1663.33, nd:5,  kat:'afa'},
+    {id:28, name:'Power Sled (Hyrox)',                     datum:'2026-08-01', netto:358.29,  nd:7,  kat:'gwg'},
+    {id:29, name:'Power Rope (Hyrox)',                     datum:'2026-08-01', netto:174.96,  nd:5,  kat:'gwg'},
+    {id:30, name:'SKLZ Huerden 6er Pack (2 Stk)',          datum:'2026-08-01', netto:99.98,   nd:5,  kat:'gwg'},
+    {id:31, name:'Yogamatten Pro (10 Stk)',                datum:'2026-08-01', netto:332.50,  nd:5,  kat:'gwg'},
+    {id:32, name:'Yoga Block (10 Stk)',                    datum:'2026-08-01', netto:225.00,  nd:3,  kat:'gwg'},
+    {id:33, name:'Kettlebellablage (2 Stk)',               datum:'2026-08-01', netto:498.33,  nd:7,  kat:'gwg'},
+    {id:34, name:'Hantelscheibenstaender Pro',             datum:'2026-08-01', netto:207.50,  nd:7,  kat:'gwg'},
+    // ELEKTRONIK & EINRICHTUNG
+    {id:35, name:'Mixer (2 Stk)',                          datum:'2026-08-01', netto:148.33,  nd:5,  kat:'gwg'},
+    {id:36, name:'Fernseher',                              datum:'2026-08-01', netto:457.50,  nd:5,  kat:'gwg'},
+    {id:37, name:'Tablet',                                 datum:'2026-08-01', netto:182.50,  nd:3,  kat:'gwg'},
+    {id:38, name:'Soundanlage',                            datum:'2026-08-01', netto:249.17,  nd:7,  kat:'gwg'},
+    {id:39, name:'Ventilatoren (2 Stk)',                   datum:'2026-08-01', netto:170.00,  nd:5,  kat:'gwg'},
+    {id:40, name:'Kuehlschrank',                           datum:'2026-08-01', netto:482.50,  nd:7,  kat:'gwg'},
+    {id:41, name:'Ueberwachungskameras',                   datum:'2026-08-01', netto:82.50,   nd:5,  kat:'gwg'},
+    {id:42, name:'Klimaanlage',                            datum:'2026-08-01', netto:749.17,  nd:10, kat:'gwg'},
+    {id:43, name:'Kassenlade',                             datum:'2026-08-01', netto:58.33,   nd:5,  kat:'gwg'},
+    {id:44, name:'SUMUP POS Kassensystem',                 datum:'2026-08-01', netto:191.66,  nd:3,  kat:'gwg'},
+    {id:45, name:'Beleuchtung-Waben (3 Stk)',              datum:'2026-08-01', netto:212.50,  nd:7,  kat:'gwg'},
+    {id:46, name:'Timer',                                  datum:'2026-08-01', netto:49.17,   nd:3,  kat:'gwg'},
+    {id:47, name:'LED Streifen (25 Stk)',                  datum:'2026-08-01', netto:479.17,  nd:5,  kat:'afa'},
+    {id:48, name:'Halterung Yogamatte',                    datum:'2026-08-01', netto:25.00,   nd:5,  kat:'gwg'},
+    {id:49, name:'Wandspiegel 214/137 (4 Stk)',            datum:'2026-07-01', netto:830.00,  nd:10, kat:'afa'},
+    {id:50, name:'Spiegel Halbrund 50x100',                datum:'2026-07-01', netto:82.50,   nd:10, kat:'gwg'},
+    {id:51, name:'Waeschekorb',                            datum:'2026-08-01', netto:49.99,   nd:3,  kat:'gwg'},
+    {id:52, name:'Bar',                                    datum:'2026-07-01', netto:1333.33, nd:10, kat:'afa'},
+    {id:53, name:'Sitzmoebel (2 Stk)',                     datum:'2026-07-01', netto:700.00,  nd:7,  kat:'afa'},
+    {id:54, name:'Regale (4 Stk)',                         datum:'2026-08-01', netto:250.00,  nd:7,  kat:'gwg'},
+    {id:55, name:'Bilderrahmen (5 Stk)',                   datum:'2026-08-01', netto:116.67,  nd:5,  kat:'gwg'},
+  ]
+});
+
+let S = {};
+function loadS() {
+  try { const r = localStorage.getItem(KEY); if(r) return JSON.parse(r); } catch {}
+  return null;
+}
+function initS() {
+  const sv = loadS();
+  const def26 = defState(); // mo:4, mit allen Investitionen
+
+  // 2027-2029: eigene Einnahmen/Ausgaben, aber KEINE Startinvestitionen
+  function defFolgejahr(mo, ausl) {
+    const d = defState();
+    d.ein.mo = mo; d.ein.ausl = ausl;
+    d.anlagen = []; // Folgejahre starten ohne Anlagen – user trägt neue ein
+    return d;
+  }
+
+  S = {
+    2026: sv?.[2026] || def26,
+    2027: sv?.[2027] || defFolgejahr(12, 65),
+    2028: sv?.[2028] || defFolgejahr(12, 75),
+    2029: sv?.[2029] || defFolgejahr(12, 80),
+  };
+}
+function saveS() { localStorage.setItem(KEY, JSON.stringify(S)); }
+function D() { return S[year]; }
+
+let ids = {fk:200, vk:200, anlagen:300, privat:100};
+function initIds() {
+  ['fk','vk','anlagen','privat'].forEach(k => {
+    ids[k] = Math.max(...D()[k].map(r=>r.id||0), 0) + 1;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+const MO = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const el  = id => document.getElementById(id);
+const num = id => parseFloat(el(id)?.value) || 0;
+const fmt = n  => '€\u202f' + Math.round(Math.abs(n)).toLocaleString('de-AT') + (n < 0 ? ' –' : '');
+const fmtS= n  => (n < 0 ? '– ' : '') + '€\u202f' + Math.round(Math.abs(n)).toLocaleString('de-AT');
+const pct = n  => (+n).toFixed(1) + '%';
+function toast(msg, t='ok') {
+  const e = el('toast'); e.textContent=msg; e.className='toast show '+t;
+  setTimeout(()=>e.className='toast', 2000);
+}
+function blurEnter(e) { if(e.key==='Enter'){e.preventDefault();e.target.blur();} }
+function rv(rid, vid, sfx) { el(vid).textContent = el(rid).value + sfx; }
+function row(lbl, val, cls='', bold=false, big=false) {
+  return `<div class="row${bold?' bold':''}${big?' big':''}">
+    <span class="lbl">${lbl}</span><span class="val ${cls}">${val}</span></div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+const PAGES = {
+  dashboard:       ['Dashboard', 'Gesamtübersicht · live berechnet'],
+  einnahmen:       ['Einnahmen', 'Kapazität · Preise · Simulation'],
+  ausgaben:        ['Ausgaben', 'Fixkosten · Variable Kosten'],
+  afa:             ['Investitionen & AfA', 'Anlageverzeichnis · Abschreibungen'],
+  steuer:          ['Steuern & Abgaben', 'USt · SVS · Einkommensteuer'],
+  jahresabschluss: ['Jahresabschluss', 'GuV · Ergebnis · Rücklagen'],
+  vergleich:       ['Jahresvergleich', '2026–2029 · Verlustvortrag · Kumuliert'],
+  privat:          ['Privatausgaben', 'Monatliche private Kosten im Überblick'],
+  kontostand:      ['Kontostand', 'Giro · Geschäft · Steuerkonto · Monatsvorschau'],
+};
+let activePage = 'dashboard';
+
+function goPage(p, elNav) {
+  activePage = p;
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  el('page-'+p).classList.add('active');
+  if(elNav) elNav.classList.add('active');
+  const m = PAGES[p]||['',''];
+  el('tb-title').textContent = m[0];
+  el('tb-sub').textContent = m[1];
+  renderPage();
+}
+
+function setYear(y, e) {
+  year = y;
+  document.querySelectorAll('.ybtn').forEach(b=>b.classList.remove('active'));
+  e.classList.add('active');
+  el('tb-year').textContent = y;
+  el('afa-yr-lbl').textContent = y;
+  syncInputs(); renderPage();
+}
+
+// ═══════════════════════════════════════════════════
+// INPUT SYNC
+// ═══════════════════════════════════════════════════
+const EIN_MAP = {
+  eh:'e-eh', pl:'e-pl', ausl:'e-ausl',
+  peinzel:'e-peinzel', pblock:'e-pblock', pabo:'e-pabo', aboAnteil:'e-abo',
+  silent:'e-silent', chal:'e-chal', lounge:'e-lounge', sonstiges:'e-sonstiges', mo:'e-mo'
+};
+function syncInputs() {
+  const d = D().ein;
+  Object.entries(EIN_MAP).forEach(([k,id]) => {
+    const e = el(id); if(!e) return; e.value = d[k];
+    if(id==='e-ausl') el('e-ausl-v').textContent = d[k]+'%';
+    if(id==='e-abo')  el('e-abo-v').textContent  = d[k]+'%';
+  });
+}
+function readInputs() {
+  const d = D().ein;
+  Object.entries(EIN_MAP).forEach(([k,id]) => {
+    const e = el(id); if(!e) return; d[k] = parseFloat(e.value)||0;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// KERN-BERECHNUNGEN
+// ═══════════════════════════════════════════════════
+
+// ── EINNAHMEN ──
+function calcEin(yr) {
+  const d = S[yr].ein;
+  const kapWoche = d.eh * d.pl;
+  const belegtWoche = kapWoche * d.ausl / 100;
+  const buMonat = Math.round(belegtWoche * 4.33);
+  const aboK = Math.round(buMonat * d.aboAnteil / 100);
+  const einzelK = buMonat - aboK;
+  const einzelEin = einzelK * d.peinzel;
+  const aboEin = aboK * (d.pabo / 12);
+  const training = einzelEin + aboEin;
+  const zusatz = d.silent + d.chal + d.lounge + d.sonstiges;
+  const moNetto = training + zusatz;
+  const jahrNetto = moNetto * d.mo;
+  return { kapWoche, belegtWoche:Math.round(belegtWoche), buMonat, aboK, einzelK,
+           einzelEin, aboEin, training, zusatz, moNetto, jahrNetto,
+           mo:d.mo, ausl:d.ausl,
+           silent:d.silent, chal:d.chal, lounge:d.lounge, sonstiges:d.sonstiges };
+}
+
+// ── AUSGABEN ──
+function calcAusg(yr) {
+  const mo = S[yr].ein.mo || 12;  // aktive Monate = gleich wie Einnahmen
+  const fk = S[yr].fk.reduce((s,r)=>s+r.netto, 0);
+  const vk = S[yr].vk.reduce((s,r)=>s+r.netto, 0);
+  const vst = [...S[yr].fk,...S[yr].vk].reduce((s,r)=>s+r.netto*(r.mwst||0)/100, 0);
+  return { fk, vk, gesamt:fk+vk, vst, mo,
+           jahrFk:fk*mo, jahrVk:vk*mo, jahrGes:(fk+vk)*mo };
+}
+
+// ── AfA ──
+// Österreich: AfA beginnt im Monat der Inbetriebnahme (nicht Halbjahresregel wie DE!)
+// Korrekt: bei Anschaffung Jul = 6/12 AfA, Aug = 5/12, etc.
+function calcAfA(yr) {
+  let afaJahr=0, gwgSum=0, sofortSum=0, linearSum=0;
+
+  // Alle Anlagen aus dem aktuellen Jahr UND allen Vorjahren sammeln
+  // (Vorjahres-GWG/Sofort haben bw=0 und thisAfA=0 → werden in renderAfA herausgefiltert)
+  const alleAnlagen = [];
+  const allYears = [2026, 2027, 2028, 2029];
+  for (const y of allYears) {
+    if (y > yr) break;
+    if (S[y] && S[y].anlagen) {
+      alleAnlagen.push(...S[y].anlagen);
+    }
+  }
+
+  const rows = alleAnlagen.map(a => {
+    const kj  = new Date(a.datum).getFullYear();
+    const km  = new Date(a.datum).getMonth()+1; // 1–12
+    const nd  = Math.max(1, a.nd||5);
+    const n   = a.netto;
+    let thisAfA=0, bw=n;
+
+    if (a.kat==='gwg' || n < 1000) {
+      // GWG: Sofortabsetzung im Anschaffungsjahr
+      thisAfA = kj===yr ? n : 0;
+      bw = yr>=kj ? 0 : n;
+      if(kj===yr) gwgSum += n;
+    } else if (a.kat==='sofort') {
+      thisAfA = kj===yr ? n : 0;
+      bw = yr>=kj ? 0 : n;
+      if(kj===yr) sofortSum += n;
+    } else {
+      // Lineare AfA – Österreich: monatsgenaue Abschreibung ab Inbetriebnahmemonat
+      const jAfA = n / nd;
+      const mAfA = jAfA / 12;
+      if (yr < kj) {
+        thisAfA = 0; bw = n;
+      } else if (yr === kj) {
+        // Monate im Anschaffungsjahr: ab km bis Dezember
+        const monateDiesJahr = 13 - km; // z.B. Jul=7 → 6 Monate
+        thisAfA = mAfA * monateDiesJahr;
+        bw = Math.max(0, n - thisAfA);
+        linearSum += thisAfA;
+      } else {
+        // Folgejahre: volle 12 Monate, außer komplett abgeschrieben
+        // Bereits abgeschrieben: erstes Jahr anteilig + volle Jahre danach
+        const moErstesJahr = 13 - km;
+        const abgErstesJahr = mAfA * moErstesJahr;
+        const folgejahre = yr - kj;
+        const abgGesamt = abgErstesJahr + folgejahre * jAfA;
+        if (abgGesamt >= n) { thisAfA=0; bw=0; }
+        else { thisAfA = Math.min(jAfA, n - abgGesamt + jAfA); bw = Math.max(0, n - abgGesamt); }
+        linearSum += thisAfA;
+      }
+    }
+    afaJahr += thisAfA;
+    return { ...a, thisAfA, bw, jAfA: a.kat==='afa' ? n/nd : 0 };
+  });
+  return { rows, afaJahr, gwgSum, sofortSum, linearSum };
+}
+
+// ── UST ──
+function calcUST(ein, ausg, yr) {
+  const ustEin  = ein.jahrNetto * 0.20;  // 20% USt auf Einnahmen
+  const vstAusg = ausg.vst * ausg.mo;     // Vorsteuer aus laufenden Ausgaben (aktive Monate)
+  // Vorsteuer aus Investitionen (nur im Kaufjahr)
+  // Vorsteuer aus Investitionen: nur das aktuelle Jahr (yr = Kaufjahr)
+  const vstInv = (S[yr] && S[yr].anlagen ? S[yr].anlagen : [])
+    .filter(a => new Date(a.datum).getFullYear()===yr)
+    .reduce((s,a)=>s+a.netto*0.20, 0);
+  const zahllast = ustEin - vstAusg - vstInv;
+  return { ustEin, vstAusg, vstInv, zahllast };
+}
+
+// ── SVS ──
+// GSVG 2024/2025: Beitragssätze & Mindestbeiträge
+function calcSVS(gewinnVorSVS, isGruendungsjahr=false) {
+  const g = Math.max(0, gewinnVorSVS);
+
+  // Beitragssätze 2025
+  const KV_SATZ  = 0.0680;  // Krankenversicherung
+  const PV_SATZ  = 0.1850;  // Pensionsversicherung
+  const UV_FIX   = 134.23;  // Unfallversicherung (Fixbetrag 2025)
+  const BV_SATZ  = 0.0153;  // Selbständigenvorsorge (Betriebliche Vorsorge)
+
+  // Mindestbeitragsgrundlage 2025: € 6.221,28/Jahr
+  const MIN_BGL  = 6221.28;
+  // Höchstbeitragsgrundlage: € 80.220/Jahr (monatlich € 6.685)
+  const MAX_BGL  = 80220;
+
+  // Im Gründungsjahr: vorläufig Mindestbeitrag
+  // Ab 2. Jahr: Nachbemessung auf Basis tatsächlicher Gewinn
+  const bgl = isGruendungsjahr ? MIN_BGL : Math.min(Math.max(g, MIN_BGL), MAX_BGL);
+
+  const kv  = bgl * KV_SATZ;
+  const pv  = bgl * PV_SATZ;
+  const uv  = UV_FIX;
+  const bv  = g   * BV_SATZ; // BV auf tatsächlichem Gewinn
+  const vorlaeutig = isGruendungsjahr;
+  const total = kv + pv + uv + bv;
+
+  // Mindestbeitrag ohne BV & UV:
+  const minKVPV = MIN_BGL * (KV_SATZ + PV_SATZ);
+  const minGes  = minKVPV + UV_FIX;
+
+  return { kv, pv, uv, bv, total, monat:total/12, bgl, MIN_BGL, MAX_BGL, vorlaeutig,
+           KV_SATZ, PV_SATZ, BV_SATZ, minGes };
+}
+
+// ── EINKOMMENSTEUER § 33 EStG ──
+// Tarif gültig ab Veranlagung 2024 (Steuerreform 2024)
+function calcESt(zvE) {
+  const bands = [
+    {von:0,      bis:11693,   satz:0},
+    {von:11693,  bis:19134,   satz:20},
+    {von:19134,  bis:32075,   satz:30},
+    {von:32075,  bis:62080,   satz:41},
+    {von:62080,  bis:93120,   satz:48},
+    {von:93120,  bis:1000000, satz:50},
+    {von:1000000,bis:Infinity,satz:55},
+  ];
+  let steuer = 0;
+  const detail = bands.map(b => {
+    const zu = Math.max(0, Math.min(zvE, b.bis) - b.von);
+    const betrag = zu * b.satz / 100;
+    steuer += betrag;
+    return { ...b, zu, betrag };
+  });
+  // Absetzbeträge (§ 33 Abs. 5 EStG):
+  // Allgemeiner Absetzbetrag: max € 887 (einschleifend ab zvE > € 14.000)
+  const aab = Math.max(0, 887 - Math.max(0, (zvE - 14000) * 0.05));
+  // Unterhaltsabsetzbetrag, Pendlerpauschale etc. nicht berücksichtigt (individuell)
+  steuer = Math.max(0, steuer - aab);
+  const esatz = zvE > 0 ? steuer/zvE*100 : 0;
+  return { steuer, monat:steuer/12, detail, aab, esatz, zvE };
+}
+
+// ── GESAMTBERECHNUNG ──
+function calcAll(yr, verlustVortrag=0) {
+  yr = yr || year;
+  const ein   = calcEin(yr);
+  const ausg  = calcAusg(yr);
+  const afa   = calcAfA(yr);
+
+  // Gewinn = Umsatz - Betriebsausgaben - AfA
+  // Betriebsausgaben laufen für alle Monate (auch wenn Studio noch nicht offen)
+  const aufwand = ausg.jahrGes + afa.afaJahr;
+  const gewVorSVS = ein.jahrNetto - aufwand;
+
+  // SVS: 2026 = Gründungsjahr, 2027 = Folgejahr
+  const isGruendung = yr === 2026;
+  const svs = calcSVS(Math.max(0, gewVorSVS), isGruendung);
+
+  // zvE = Gewinn nach SVS + Verlustvortrag aus Vorjahr
+  const gewNachSVS = gewVorSVS - svs.total;
+  const zvE = Math.max(0, gewNachSVS + verlustVortrag);
+
+  const est = calcESt(zvE);
+  const ust = calcUST(ein, ausg, yr);
+
+  const netto    = gewNachSVS - est.steuer; // Jahres-Netto privat
+  const nettoMo  = netto / (ein.mo || 12);
+
+  // USt Zahllast = was du dem Finanzamt überweist (monatlich/quartalsweise)
+  // Kann negativ sein = Erstattung
+  return { ein, ausg, afa, gewVorSVS, gewNachSVS, aufwand,
+           svs, zvE, est, ust, netto, nettoMo, verlustVortrag };
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function recalc() { readInputs(); saveS(); renderPage(); }
+
+function renderPage() {
+  if(activePage==='dashboard')      renderDash();
+  else if(activePage==='einnahmen') renderEin();
+  else if(activePage==='ausgaben')  renderAusg();
+  else if(activePage==='afa')       renderAfA();
+  else if(activePage==='steuer')    renderSteuer();
+  else if(activePage==='jahresabschluss') renderJahr();
+  else if(activePage==='vergleich') renderVergl();
+  else if(activePage==='privat')    renderPrivat();
+  else if(activePage==='kontostand') renderKontostand();
+}
+
+// ── DASHBOARD ──
+function renderDash() {
+  const R = calcAll();
+  const { ein, ausg, afa, gewVorSVS, svs, est, ust, netto, nettoMo } = R;
+
+  const privGes = (D().privat||[]).reduce((s,r)=>s+r.betrag,0);
+  el('dash-kpis').innerHTML = [
+    {l:'Betriebseinnahmen / Monat',  v:fmtS(ein.moNetto),  s:`${fmtS(ein.jahrNetto)} / Jahr`, c:'g'},
+    {l:'Betriebsausgaben / Monat',   v:fmtS(ausg.gesamt+afa.afaJahr/ein.mo), s:'inkl. AfA-Anteil', c:'r'},
+    {l:'Was bleibt dir / Monat',     v:fmtS(nettoMo - privGes), s:`Netto nach Steuern & Privatkosten`, c:nettoMo-privGes>=0?'g':'r'},
+    {l:'Steuern & SVS / Jahr',       v:fmtS(svs.total+est.steuer), s:`USt-Zahllast: ${fmtS(ust.zahllast)}`, c:'o'},
+  ].map(k=>`<div class="kpi"><div class="kpi-lbl">${k.l}</div><div class="kpi-val ${k.c}">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+
+  const startMo = 12 - ein.mo;
+  const einArr  = MO.map((_,i)=>i>=startMo?ein.moNetto:0);
+  const ausgArr = MO.map((_,i)=>i>=startMo ? ausg.gesamt+afa.afaJahr/ein.mo : 0);
+  const cfArr   = einArr.map((v,i)=>v-ausgArr[i]);
+  mkChart('ch-cf','bar',MO,[
+    {label:'Einnahmen', data:einArr,  backgroundColor:'rgba(34,197,94,.55)',  borderRadius:4},
+    {label:'Ausgaben',  data:ausgArr, backgroundColor:'rgba(248,113,113,.45)',borderRadius:4},
+  ]);
+
+  // Liquidität: was musst du monatlich zurücklegen?
+  const privGesLiq = (D().privat||[]).reduce((s,r)=>s+r.betrag,0);
+  const frei = nettoMo - privGesLiq;
+  el('dash-liq').innerHTML =
+    row('Betriebseinnahmen / Monat', fmtS(ein.moNetto), 'g') +
+    row('Betriebsausgaben / Monat',  fmtS(ausg.gesamt), 'r') +
+    row('Betriebssaldo / Monat',     fmtS(ein.moNetto-ausg.gesamt), ein.moNetto-ausg.gesamt>=0?'g':'r',true) +
+    '<hr>' +
+    row('SVS zurücklegen / Monat',   fmtS(svs.monat), 'o') +
+    row('Steuer zurücklegen / Monat',fmtS(est.monat), 'o') +
+    row('USt-Abgabe / Monat',        fmtS(ust.zahllast/12), ust.zahllast>0?'o':'g') +
+    '<hr>' +
+    row('Netto Einkommen / Monat',   fmtS(nettoMo), nettoMo>=0?'g':'r') +
+    row('Private Ausgaben / Monat',  fmtS(privGesLiq), 'r') +
+    row('Frei verfügbar / Monat',    fmtS(frei), frei>=0?'g':'r', true) +
+    `<div class="info-box ${frei>=0?'info-green':'info-red'}" style="margin-top:8px">
+      ${frei>=0
+        ? `✓ Dir bleiben ${fmtS(frei)}/Monat nach Steuern & Privatkosten`
+        : `⚠ Deckungslücke ${fmtS(-frei)}/Monat — Ausgaben prüfen!`}
+    </div>`;
+
+  // Break-even
+  const beSaldo = ein.moNetto - ausg.gesamt;
+  const beProg = Math.min(100, Math.max(0, Math.round(ein.moNetto/Math.max(1,ausg.gesamt)*100)));
+  el('dash-be').innerHTML =
+    row('Fixkosten / Monat',  fmtS(ausg.gesamt), 'r') +
+    row('Einnahmen / Monat',  fmtS(ein.moNetto), 'g') +
+    `<div class="prog"><div class="prog-fill" style="width:${beProg}%;background:${beSaldo>=0?'var(--g)':'var(--r)'}"></div></div>` +
+    row('Monatssaldo',        fmtS(beSaldo), beSaldo>=0?'g':'r', true) +
+    `<div class="info-box ${beSaldo>=0?'info-green':'info-orange'}" style="margin-top:8px">
+      ${beSaldo>=0
+        ? `✓ Break-Even erreicht (+${fmtS(beSaldo)}/Mo Deckungsbeitrag)`
+        : `Break-Even bei ${Math.round(ausg.gesamt/Math.max(1,ein.moNetto)*100)}% Auslastung. Noch ${fmtS(-beSaldo)}/Monat fehlen.`}
+    </div>`;
+}
+
+// ── EINNAHMEN ──
+function renderEin() {
+  const E = calcEin(year);
+  const d = D().ein;
+  el('ein-prev').innerHTML =
+    row('Max. Kapazität / Woche',    E.kapWoche+' Plätze', 'd') +
+    row('Belegte Plätze / Woche',    E.belegtWoche+' ('+d.ausl+'%)', 'd') +
+    row('Buchungen / Monat (Σ)',     E.buMonat, 'g') +
+    row('→ Abo-Kunden',              E.aboK, 'd') +
+    row('→ Einzelzahler',            E.einzelK, 'd') +
+    '<hr>' +
+    row('Training (Einzel)',          fmtS(E.einzelEin), 'g') +
+    row('Training (Abo-Anteil)',      fmtS(E.aboEin), 'g') +
+    row('Silent Room',                fmtS(d.silent), 'g') +
+    row('Sa-Challenges',              fmtS(d.chal), 'g') +
+    row('Lounge / Getränke',          fmtS(d.lounge), 'g') +
+    row('Sonstiges',                  fmtS(d.sonstiges), 'g') +
+    '<hr>' +
+    row('Monat Netto',                fmtS(E.moNetto), 'g', true) +
+    row('Monat Brutto (+20% USt)',    fmtS(E.moNetto*1.2), 'd') +
+    row('Jahr Netto ('+d.mo+' Mo)',   fmtS(E.jahrNetto), 'g', true, true) +
+    row('Jahr Brutto',                fmtS(E.jahrNetto*1.2), 'd');
+
+  mkChart('ch-ein','doughnut',
+    ['Einzel-Training','Abo-Training','Silent Room','Challenges','Lounge','Sonstiges'],
+    [{data:[E.einzelEin,E.aboEin,d.silent,d.chal,d.lounge,d.sonstiges],
+      backgroundColor:['#22c55e','#16a34a','#4ade80','#86efac','#bbf7d0','#dcfce7'],borderWidth:0}]);
+}
+
+// ── AUSGABEN ──
+function renderAusg() {
+  const A = calcAusg(year);
+  function tbRows(col) {
+    return S[year][col].map(r=>`<tr>
+      <td><span class="ec" contenteditable onblur="etxt('${col}',${r.id},'name',this)" onkeydown="blurEnter(event)">${r.name}</span></td>
+      <td class="muted"><span class="ec" contenteditable onblur="etxt('${col}',${r.id},'kat',this)" onkeydown="blurEnter(event)">${r.kat}</span></td>
+      <td class="tr mono"><span class="ec" contenteditable onblur="editNum('${col}',${r.id},'netto',this)" onkeydown="blurEnter(event)">${r.netto.toFixed(2)}</span></td>
+      <td><button class="btn-del" onclick="delR('${col}',${r.id})">✕</button></td>
+    </tr>`).join('');
+  }
+  el('fk-tbody').innerHTML = tbRows('fk');
+  el('vk-tbody').innerHTML = tbRows('vk');
+  el('fk-sum').textContent = fmtS(A.fk);
+  el('vk-sum').textContent = fmtS(A.vk);
+  el('ausg-sum').innerHTML =
+    row('Fixkosten / Monat',    fmtS(A.fk), 'r') +
+    row('Variable Kosten / Mo', fmtS(A.vk), 'r') +
+    row('Gesamt / Monat',       fmtS(A.gesamt), 'r', true) +
+    row('Gesamt / Jahr ('+A.mo+' Mo)',  fmtS(A.jahrGes), 'r') +
+    row('Vorsteuer / Monat',    fmtS(A.vst), 'g') +
+    row('Fixkostenanteil',      pct(A.fk/Math.max(1,A.gesamt)*100), 'd');
+}
+
+// ── AfA ──
+function renderAfA() {
+  const AFA = calcAfA(year);
+  el('afa-yr-lbl').textContent = year;
+
+  // Filter & Sort
+  const filterVal = el('afa-filter')?.value || 'alle';
+  const sortVal   = el('afa-sort')?.value   || 'datum';
+  function afaTyp(r) { return (r.kat==='gwg'||r.netto<1000)?'gwg':r.kat==='sofort'?'sofort':'afa'; }
+  function sortRows(arr) {
+    return [...arr].sort((a,b)=>{
+      if(sortVal==='datum')     return a.datum.localeCompare(b.datum);
+      if(sortVal==='netto-desc')return b.netto-a.netto;
+      if(sortVal==='netto-asc') return a.netto-b.netto;
+      if(sortVal==='name')      return a.name.localeCompare(b.name);
+      return 0;
+    });
+  }
+  function filterRow(r) { return filterVal==='alle' || afaTyp(r)===filterVal; }
+
+  // Trenne: neu in diesem Jahr vs. laufende AfA aus Vorjahren
+  const diesJahr  = sortRows(AFA.rows.filter(r => new Date(r.datum).getFullYear() === year && filterRow(r)));
+  const vorjahre  = sortRows(AFA.rows.filter(r => new Date(r.datum).getFullYear() < year && r.thisAfA > 0 && filterRow(r)));
+
+  function anlageRow(r, editable) {
+    const kj = new Date(r.datum).getFullYear();
+    const isGWG = r.kat==='gwg' || r.netto < 1000;
+    const isSofort = r.kat==='sofort';
+    const b = isGWG    ? '<span class="badge badge-g">GWG</span>'
+            : isSofort ? '<span class="badge badge-d">Sofort</span>'
+            :            '<span class="badge badge-o">AfA</span>';
+    if (editable) {
+      return `<tr>
+        <td><span class="ec" contenteditable onblur="etxtYr(${kj},'anlagen',${r.id},'name',this)" onkeydown="blurEnter(event)">${r.name}</span></td>
+        <td class="muted"><span class="ec" contenteditable onblur="etxtYr(${kj},'anlagen',${r.id},'datum',this)" onkeydown="blurEnter(event)">${r.datum}</span></td>
+        <td>${b}</td>
+        <td class="tr mono"><span class="ec" contenteditable onblur="editNumYr(${kj},'anlagen',${r.id},'netto',this)" onkeydown="blurEnter(event)">${r.netto.toFixed(0)}</span></td>
+        <td class="tr muted">${r.kat==='afa'?r.nd+'J':'–'}</td>
+        <td class="tr o">${fmtS(r.thisAfA)}</td>
+        <td class="tr d">${fmtS(r.bw)}</td>
+        <td><button class="btn-del" onclick="delRYr(${kj},'anlagen',${r.id})">✕</button></td>
+      </tr>`;
+    } else {
+      // Vorjahres-Anlagen: nur lesbar, kein Delete
+      return `<tr style="opacity:.7">
+        <td>${r.name} <span style="font-size:9px;color:var(--d2)">(${kj})</span></td>
+        <td class="muted">${r.datum}</td>
+        <td>${b}</td>
+        <td class="tr mono">${r.netto.toFixed(0)}</td>
+        <td class="tr muted">${r.kat==='afa'?r.nd+'J':'–'}</td>
+        <td class="tr o">${fmtS(r.thisAfA)}</td>
+        <td class="tr d">${fmtS(r.bw)}</td>
+        <td></td>
+      </tr>`;
+    }
+  }
+
+  // Baue Tabelle mit Sektionen
+  let html = '';
+
+  // Sektion 1: Neue Investitionen dieses Jahres
+  html += `<tr><td colspan="8" style="padding:8px 10px 4px;font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--g);border-bottom:1px solid var(--b1)">
+    Investitionen ${year}</td></tr>`;
+  if (diesJahr.length === 0) {
+    html += `<tr><td colspan="8" style="padding:10px;color:var(--d2);font-size:11px">
+      Noch keine Investitionen in ${year} — über "+ Anlage" hinzufügen</td></tr>`;
+  } else {
+    html += diesJahr.map(r => anlageRow(r, true)).join('');
+  }
+
+  // Sektion 2: Laufende AfA aus Vorjahren (nur wenn Folgejahr)
+  if (year > 2026 && vorjahre.length > 0) {
+    html += `<tr><td colspan="8" style="padding:10px 10px 4px;font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--d);border-bottom:1px solid var(--b1);border-top:2px solid var(--b2)">
+      Laufende Abschreibungen aus Vorjahren</td></tr>`;
+    html += vorjahre.map(r => anlageRow(r, false)).join('');
+  }
+
+  el('afa-tbody').innerHTML = html;
+  el('afa-sum').textContent = fmtS(AFA.afaJahr);
+  el('afa-kpis').innerHTML = [
+    {l:'GWG / Sofortaufwand '+year, v:fmtS(AFA.gwgSum+AFA.sofortSum), s:'100% im Anschaffungsjahr', c:'g'},
+    {l:'Laufende AfA '+year,        v:fmtS(AFA.linearSum),              s:'Aus Vorjahren + neu', c:'o'},
+    {l:'AfA gesamt '+year,          v:fmtS(AFA.afaJahr),                s:'Mindert den Gewinn', c:'r'},
+  ].map(k=>`<div class="kpi"><div class="kpi-lbl">${k.l}</div><div class="kpi-val ${k.c}">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+}
+
+// ── STEUERN ──
+function renderSteuer() {
+  const R = calcAll();
+  const { ein, ausg, gewVorSVS, svs, est, ust } = R;
+  const isGruend = year===2026;
+
+  // USt
+  el('ust-panel').innerHTML =
+    row('Umsatzsteuer (20%) auf Einnahmen', fmtS(ust.ustEin), 'r') +
+    row('Vorsteuer aus lfd. Ausgaben',      fmtS(ust.vstAusg), 'g') +
+    row('Vorsteuer aus Investitionen',      fmtS(ust.vstInv), 'g') +
+    row('USt-Zahllast / Jahr',              fmtS(ust.zahllast), ust.zahllast>0?'r':'g', true) +
+    row('USt-Zahllast / Monat',             fmtS(ust.zahllast/12), ust.zahllast>0?'o':'g') +
+    (ust.zahllast<0
+      ? `<div class="info-box info-green" style="margin-top:8px">✓ Vorsteuerüberhang: du bekommst ${fmtS(-ust.zahllast)} vom Finanzamt zurück</div>`
+      : `<div class="info-box info-orange" style="margin-top:8px">Quartalsweise Voranmeldung ans Finanzamt: ${fmtS(ust.zahllast/4)}/Quartal</div>`);
+
+  // SVS
+  el('svs-panel').innerHTML =
+    row('Gewinn vor SVS', fmtS(gewVorSVS), 'd') +
+    row('Beitragsgrundlage', fmtS(svs.bgl), 'd') +
+    (isGruend ? `<div class="info-box info-orange" style="margin:6px 0">⚡ Gründungsjahr: vorläufig Mindestbeitrag (€ ${Math.round(svs.MIN_BGL)}/Jahr). Nachzahlung erfolgt nach Steuerbescheid.</div>` : '') +
+    row('SVS gesamt / Jahr',  fmtS(svs.total), 'o', true) +
+    row('SVS / Monat',        fmtS(svs.monat), 'o') +
+    `<div class="info-box info-orange" style="margin-top:8px">Monatlich ${fmtS(svs.monat)} zurücklegen!</div>`;
+
+  el('svs-tbl').innerHTML = `<thead><tr><th>Beitragsart</th><th class="tr">Satz</th><th class="tr">Basis</th><th class="tr">€/Jahr</th></tr></thead><tbody>`+[
+    {n:'Krankenversicherung (KV)',  s:pct(svs.KV_SATZ*100), b:'BGL',     v:svs.kv},
+    {n:'Pensionsversicherung (PV)', s:pct(svs.PV_SATZ*100), b:'BGL',     v:svs.pv},
+    {n:'Unfallversicherung (UV)',   s:'fix',                  b:'fix',     v:svs.uv},
+    {n:'Selbständigenvorsorge (BV)',s:pct(svs.BV_SATZ*100), b:'Gewinn',  v:svs.bv},
+    {n:'GESAMT',                    s:'≈27%',                 b:'',        v:svs.total},
+  ].map(r=>`<tr><td>${r.n}</td><td class="tr muted">${r.s}</td><td class="tr muted">${r.b}</td><td class="tr o mono">${fmtS(r.v)}</td></tr>`).join('')+'</tbody>';
+
+  // ESt
+  const FARBEN = ['var(--d2)','#38bdf8','#34d399','#fbbf24','#f87171','#a78bfa','#ec4899'];
+  el('est-panel').innerHTML = est.detail.filter(b=>R.zvE>b.von).map((b,i)=>{
+    const bar = Math.min(100, b.zu/Math.max(1,R.zvE)*100);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)">
+      <div style="width:100px;font-size:10px;color:var(--d2)">${(b.von/1000).toFixed(0)}k–${b.bis===Infinity?'∞':(b.bis/1000).toFixed(0)+'k'} €</div>
+      <div style="width:26px;text-align:right;font-size:10px;color:${FARBEN[i]}">${b.satz}%</div>
+      <div style="flex:1;height:3px;background:var(--s3);border-radius:2px"><div style="height:100%;width:${bar}%;background:${FARBEN[i]};border-radius:2px"></div></div>
+      <div style="width:72px;text-align:right;font-family:var(--mono);font-size:10px;color:${b.betrag?FARBEN[i]:'var(--d2)'}">${b.betrag?fmtS(b.betrag):'–'}</div>
+    </div>`;
+  }).join('') + '<hr>' +
+    row('Bemessungsgrundlage (zvE)',  fmtS(R.zvE), 'd') +
+    row('Allg. Absetzbetrag',          fmtS(est.aab), 'g') +
+    row('Einkommensteuer / Jahr',      fmtS(est.steuer), 'r', true) +
+    row('Einkommensteuer / Monat',     fmtS(est.monat), 'r') +
+    row('Effektiver Steuersatz',       pct(est.esatz), 'o');
+
+  // Alle Abgaben zusammen
+  el('all-taxes').innerHTML =
+    row('Umsatzsteuer (Zahllast)',   fmtS(Math.max(0,ust.zahllast)), ust.zahllast>0?'o':'g') +
+    row('SVS',                       fmtS(svs.total), 'o') +
+    row('Einkommensteuer',           fmtS(est.steuer), 'r') +
+    row('Gesamt Abgaben / Jahr',     fmtS(Math.max(0,ust.zahllast)+svs.total+est.steuer), 'r', true) +
+    row('Gesamt Abgaben / Monat',    fmtS((Math.max(0,ust.zahllast)+svs.total+est.steuer)/12), 'r') +
+    `<div class="info-box info-orange" style="margin-top:8px">
+      Empfehlung: monatlich ${fmtS((svs.monat+est.monat+Math.max(0,ust.zahllast)/12))} auf Steuerkonto reservieren
+    </div>`;
+}
+
+// ── JAHRESABSCHLUSS ──
+function renderJahr() {
+  const R = calcAll();
+  const { ein, ausg, afa, gewVorSVS, gewNachSVS, svs, est, ust, netto, nettoMo } = R;
+
+  el('guv-panel').innerHTML =
+    `<div class="slbl">Einnahmen</div>` +
+    row('Betriebseinnahmen Netto',    fmtS(ein.jahrNetto), 'g') +
+    `<div class="slbl">Betriebsausgaben</div>` +
+    row('Fixkosten ('+ein.mo+' Mo)', fmtS(ausg.jahrFk), 'r') +
+    row('Variable Kosten ('+ein.mo+' Mo)', fmtS(ausg.jahrVk), 'r') +
+    row('GWG & Sofortaufwand',        fmtS(afa.gwgSum+afa.sofortSum), 'r') +
+    row('Lineare AfA',                fmtS(afa.linearSum), 'o') +
+    row('Gesamtaufwand',              fmtS(R.aufwand), 'r', true) +
+    '<hr>' +
+    row('GEWINN VOR SVS',             fmtS(gewVorSVS), gewVorSVS>=0?'g':'r', true, true) +
+    row('SVS-Beiträge',               '– '+fmtS(svs.total), 'o') +
+    row('Gewinn nach SVS (zvE)',       fmtS(gewNachSVS), gewNachSVS>=0?'g':'r', true) +
+    row('Einkommensteuer',            '– '+fmtS(est.steuer), 'r') +
+    '<hr>' +
+    row('NETTO-GEWINN',               fmtS(netto), netto>=0?'g':'r', true, true) +
+    (netto<0 ? `<div class="info-box info-orange" style="margin-top:8px">⚠ Verlust ${fmtS(netto)} wird im Folgejahr als Verlustvortrag berücksichtigt</div>` : '');
+
+  const privJahr = (D().privat||[]).reduce((s,r)=>s+r.betrag,0) * 12;
+  const freiJahr = netto - privJahr;
+  el('result-panel').innerHTML =
+    `<div class="kpi" style="margin-bottom:10px">
+      <div class="kpi-lbl">Netto Einkommen / Monat</div>
+      <div class="kpi-val ${nettoMo>=0?'g':'r'}" style="font-size:24px">${fmtS(nettoMo)}</div>
+      <div class="kpi-sub">= Gewinn nach SVS & Einkommensteuer ÷ ${ein.mo} Monate</div>
+    </div>` +
+    row('Private Ausgaben / Monat',   fmtS(privJahr/12), 'r') +
+    row('Frei verfügbar / Monat',     fmtS(nettoMo - privJahr/12), nettoMo-privJahr/12>=0?'g':'r', true) +
+    '<hr>' +
+    row('SVS + Einkommensteuer / J',  fmtS(svs.total+est.steuer), 'r') +
+    row('USt-Zahllast (ans FA)',       fmtS(Math.max(0,ust.zahllast)), 'o') +
+    row('Steuerquote (auf Umsatz)',    pct(ein.jahrNetto>0?(svs.total+est.steuer)/ein.jahrNetto*100:0), 'o') +
+    (netto>=0
+      ? row('Empf. Rücklage (20%)', fmtS(netto*0.2), 'd')
+      : row('Verlustvortrag Folgejahr', fmtS(netto), 'r'));
+
+  const d = [Math.max(0,svs.total), Math.max(0,est.steuer), Math.max(0,netto), Math.max(0,R.aufwand)];
+  mkChart('ch-guv','doughnut',['SVS','Einkommensteuer','Netto privat','Betriebsausgaben'],
+    [{data:d, backgroundColor:['#fbbf24','#f87171','#22c55e','#333'], borderWidth:0}]);
+}
+
+// ── VERGLEICH ──
+function renderVergl() {
+  // Kettenrechnung: Verlust eines Jahres wird ins nächste vorgetragen
+  const years = [2026, 2027, 2028, 2029];
+  const results = [];
+  let vortrag = 0;
+  for (const yr of years) {
+    const R = calcAll(yr, vortrag);
+    results.push({ yr, R, vt: vortrag });
+    vortrag = R.netto < 0 ? R.netto : 0; // nur Verluste werden vorgetragen
+  }
+
+  function col({ yr, R, vt }) {
+    const steuerQ = R.ein.jahrNetto > 0 ? (R.svs.total + R.est.steuer) / R.ein.jahrNetto * 100 : 0;
+    return `<div class="panel">
+      <div class="ph"><div class="ph-title" style="color:var(--g);font-size:14px">${yr}</div></div>
+      <div class="pb" style="font-size:11px">
+        ${row('Umsatz Netto', fmtS(R.ein.jahrNetto), 'g')}
+        ${row('Ausgaben+AfA', fmtS(R.aufwand), 'r')}
+        ${vt < 0 ? row('Verlustvortrag', fmtS(vt), 'r') : ''}
+        ${row('Gewinn v. SVS', fmtS(R.gewVorSVS + (vt < 0 ? vt : 0)), R.gewVorSVS >= 0 ? 'g' : 'r', true)}
+        ${row('SVS' + (yr === 2026 ? ' (vorl.)' : ''), fmtS(R.svs.total), 'o')}
+        ${row('zvE', fmtS(R.zvE), 'd')}
+        ${row('Einkommensteuer', fmtS(R.est.steuer), 'r')}
+        <hr>
+        ${row('Netto / Jahr', fmtS(R.netto), R.netto >= 0 ? 'g' : 'r', true)}
+        ${row('Netto / Monat', fmtS(R.nettoMo), R.nettoMo >= 0 ? 'g' : 'r')}
+        ${row('Steuerquote', pct(steuerQ), 'o')}
+        <div class="info-box ${R.netto >= 0 ? 'info-green' : 'info-red'}" style="margin-top:8px;font-size:10px">
+          ${R.netto >= 0
+            ? '✓ ' + fmtS(R.netto) + ' Gewinn'
+            : '⚠ ' + fmtS(R.netto) + ' Verlust → ' + (yr + 1) + ' vorgetragen'}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  el('vergl-cols').innerHTML = results.map(col).join('');
+
+  // Kumulierter Kontostand-Chart
+  const alphas = ['1', '.75', '.5', '.3'];
+  mkChart('ch-vergl', 'bar',
+    ['Umsatz', 'Ausgaben+AfA', 'Gewinn v.SVS', 'SVS', 'Einkommensteuer', 'Netto'],
+    results.map(({ yr, R }, i) => ({
+      label: String(yr),
+      data: [R.ein.jahrNetto, R.aufwand, R.gewVorSVS, R.svs.total, R.est.steuer, R.netto],
+      backgroundColor: `rgba(34,197,94,${alphas[i]})`,
+      borderRadius: 4,
+    }))
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// CHART
+// ═══════════════════════════════════════════════════
+function mkChart(id, type, labels, datasets) {
+  const c = el(id); if(!c) return;
+  if(charts[id]) charts[id].destroy();
+  const isDough = type==='doughnut';
+  const isLine  = type==='line';
+  charts[id] = new Chart(c, {
+    type, data:{labels,datasets},
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{
+          display:isDough||isLine,
+          position:isDough?'right':'top',
+          labels:{color:'#888',font:{size:10},boxWidth:10,padding:10}
+        },
+        tooltip:{backgroundColor:'#141414',borderColor:'#2a2a2a',borderWidth:1,
+                 titleColor:'#888',bodyColor:'#e4e4e4',
+                 callbacks:isDough?{}:{label:c=>' '+fmtS(c.raw)}}
+      },
+      scales:isDough?{}:{
+        x:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'#444',font:{size:isLine?8:10},maxTicksLimit:isLine?24:12}},
+        y:{grid:{color:'rgba(255,255,255,.025)'},ticks:{color:'#444',font:{size:10},callback:v=>'€'+Math.round(v/1000)+'k'}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// INLINE EDITING
+// ═══════════════════════════════════════════════════
+function etxt(col,id,field,e) {
+  const v=e.textContent.trim(); if(!v) return;
+  const item=D()[col].find(r=>r.id===id);
+  if(item){item[field]=v;saveS();renderPage();toast('✓');}
+}
+// Vorjahres-Anlagen editieren (liest aus dem Kaufjahr)
+function etxtYr(yr,col,id,field,e) {
+  const v=e.textContent.trim(); if(!v) return;
+  const item=S[yr][col].find(r=>r.id===id);
+  if(item){item[field]=v;saveS();renderPage();toast('✓');}
+}
+function editNumYr(yr,col,id,field,e) {
+  const v=parseFloat(e.textContent.replace(',','.').replace(/[^\d.-]/g,''));
+  if(isNaN(v)){renderPage();return;}
+  const item=S[yr][col].find(r=>r.id===id);
+  if(item){item[field]=v;saveS();renderPage();toast('✓');}
+}
+function delRYr(yr,col,id) {
+  if(!confirm('Löschen?')) return;
+  S[yr][col]=S[yr][col].filter(r=>r.id!==id);
+  saveS();renderPage();toast('Gelöscht','err');
+}
+function editNum(col,id,field,e) {
+  const v=parseFloat(e.textContent.replace(',','.').replace(/[^\d.-]/g,''));
+  if(isNaN(v)){renderPage();return;}
+  const item=D()[col].find(r=>r.id===id);
+  if(item){item[field]=v;saveS();renderPage();toast('✓');}
+}
+// alias to avoid reserved word
+
+
+function delR(col,id) {
+  if(!confirm('Löschen?')) return;
+  D()[col]=D()[col].filter(r=>r.id!==id);
+  saveS();renderPage();toast('Gelöscht','err');
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════
+let mCtx=null;
+const MCFG={
+  fk:{title:'FIXKOSTEN HINZUFÜGEN', fields:[
+    {k:'name', l:'Bezeichnung',     t:'text',   ph:'z.B. Reinigung'},
+    {k:'kat',  l:'Kategorie',       t:'text',   ph:'z.B. Betrieb'},
+    {k:'netto',l:'€ Netto / Monat', t:'number', ph:'0'},
+    {k:'mwst', l:'MwSt %',          t:'number', ph:'20'},
+  ]},
+  vk:{title:'VARIABLE KOSTEN HINZUFÜGEN', fields:[
+    {k:'name', l:'Bezeichnung',     t:'text',   ph:'z.B. Social Media Ads'},
+    {k:'kat',  l:'Kategorie',       t:'text',   ph:'z.B. Marketing'},
+    {k:'netto',l:'€ Netto / Monat', t:'number', ph:'0'},
+    {k:'mwst', l:'MwSt %',          t:'number', ph:'20'},
+  ]},
+  privat:{title:'PRIVATE AUSGABE', fields:[
+    {k:'name',   l:'Bezeichnung',  t:'text',   ph:'z.B. Miete'},
+    {k:'kat',    l:'Kategorie',    t:'text',   ph:'z.B. Wohnen'},
+    {k:'betrag', l:'€ / Monat',   t:'number', ph:'0'},
+  ]},
+  anlage:{title:'ANLAGE ERFASSEN', fields:[
+    {k:'name', l:'Bezeichnung',                      t:'text',   ph:'z.B. Klimaanlage'},
+    {k:'datum',l:'Kaufdatum (JJJJ-MM-TT)',           t:'text',   ph:'2026-08-01'},
+    {k:'netto',l:'Netto-Betrag (€)',                 t:'number', ph:'0'},
+    {k:'kat',  l:'Typ', t:'select',
+      opts:['afa','gwg','sofort'],
+      labels:['AfA – lineare Abschreibung (> € 1.000)','GWG – Sofortabsetzung (< € 1.000)','Sofortaufwand (100% sofort)']},
+    {k:'nd',   l:'Nutzungsdauer Jahre (nur bei AfA)',t:'number', ph:'5'},
+  ]},
+};
+
+function openModal(ctx) {
+  mCtx=ctx;
+  const cfg=MCFG[ctx];
+  el('modal-title').textContent=cfg.title;
+  el('modal-body').innerHTML=cfg.fields.map(f=>{
+    if(f.t==='select') return `<div class="field"><label>${f.l}</label><select id="mf-${f.k}" class="inp">${f.opts.map((o,i)=>`<option value="${o}">${f.labels[i]}</option>`).join('')}</select></div>`;
+    return `<div class="field"><label>${f.l}</label><input type="${f.t}" id="mf-${f.k}" class="inp" placeholder="${f.ph}" value="${f.t==='number'?'':''}"></div>`;
+  }).join('');
+  el('overlay').classList.add('open');
+  setTimeout(()=>document.querySelector('#modal-body input')?.focus(),80);
+}
+function closeModal(){el('overlay').classList.remove('open');mCtx=null;}
+function modalSave(){
+  if(!mCtx) return;
+  const col=mCtx==='anlage'?'anlagen':mCtx==='privat'?'privat':mCtx;
+  const obj={id:ids[col]++};
+  MCFG[mCtx].fields.forEach(f=>{
+    const e=el('mf-'+f.k);
+    obj[f.k]=f.t==='number'?parseFloat(e.value)||0:e.value.trim();
+  });
+  if(!obj.name){toast('Bezeichnung fehlt','err');return;}
+  D()[col].push(obj);
+  saveS();renderPage();closeModal();toast('✓ Hinzugefügt');
+}
+
+// ── PRIVATAUSGABEN ──
+function renderPrivat() {
+  const priv = D().privat || [];
+  const gesamt = priv.reduce((s,r)=>s+r.betrag, 0);
+
+  el('priv-tbody').innerHTML = priv.map(r=>`<tr>
+    <td><span class="ec" contenteditable onblur="etxt('privat',${r.id},'name',this)" onkeydown="blurEnter(event)">${r.name}</span></td>
+    <td class="muted"><span class="ec" contenteditable onblur="etxt('privat',${r.id},'kat',this)" onkeydown="blurEnter(event)">${r.kat}</span></td>
+    <td class="tr mono"><span class="ec" contenteditable onblur="editNum('privat',${r.id},'betrag',this)" onkeydown="blurEnter(event)">${r.betrag.toFixed(2)}</span></td>
+    <td><button class="btn-del" onclick="delR('privat',${r.id})">✕</button></td>
+  </tr>`).join('');
+  el('priv-sum').textContent = fmtS(gesamt);
+
+  const R = calcAll();
+  const nettoMo = R.nettoMo;
+  const frei = nettoMo - gesamt;
+  el('priv-summary').innerHTML =
+    row('Netto Einkommen / Monat', fmtS(nettoMo), nettoMo>=0?'g':'r') +
+    row('Private Ausgaben / Monat',fmtS(gesamt), 'r') +
+    row('Frei verfügbar / Monat',  fmtS(frei), frei>=0?'g':'r', true) +
+    row('Private Ausgaben / Jahr', fmtS(gesamt*12), 'r') +
+    `<div class="info-box ${frei>=0?'info-green':'info-red'}" style="margin-top:10px">
+      ${frei>=0
+        ? `✓ Dir bleiben ${fmtS(frei)}/Monat frei verfügbar`
+        : `⚠ Deckungslücke: Ausgaben übersteigen Einkommen um ${fmtS(-frei)}/Monat`}
+    </div>`;
+
+  // Donut by Kategorie
+  const cats = {};
+  priv.forEach(r=>{ cats[r.kat]=(cats[r.kat]||0)+r.betrag; });
+  const colors = ['#22c55e','#4ade80','#86efac','#bbf7d0','#16a34a','#15803d'];
+  mkChart('ch-priv','doughnut',Object.keys(cats),[{data:Object.values(cats),backgroundColor:colors,borderWidth:0}]);
+}
+
+// ── KONTOSTAND ──
+function renderKontostand() {
+  const giroStart = parseFloat(el('ks-giro-inp')?.value) || 2500;
+  const bizStart  = parseFloat(el('ks-biz-inp')?.value)  || 28000;
+  const taxStart  = parseFloat(el('ks-tax-inp')?.value)  || 0;
+  const split     = parseFloat(el('ks-split')?.value || 70) / 100; // Anteil Einnahmen → Giro
+  const selMo     = parseInt(el('ks-sel-mo')?.value  || 9);
+  const selYr     = parseInt(el('ks-sel-yr')?.value  || 2026);
+
+  el('ks-giro-start').textContent = fmtS(giroStart);
+  el('ks-biz-start').textContent  = fmtS(bizStart);
+  el('ks-tax-start').textContent  = fmtS(taxStart);
+
+  // ── INVESTITIONEN: Summe aller Brutto-Käufe je Monat ──
+  // Alle Anlagen aus allen Jahren sammeln, mit Kaufmonat/-jahr
+  // Brutto = Netto * 1.20 (Unternehmen zahlt Brutto, VSt wird separat verrechnet)
+  const allAnlagen = [];
+  [2026,2027,2028,2029].forEach(yr => {
+    (S[yr]?.anlagen || []).forEach(a => {
+      const d = new Date(a.datum);
+      allAnlagen.push({ yr: d.getFullYear(), mo: d.getMonth()+1, brutto: a.netto * 1.20 });
+    });
+  });
+
+  // ── TIMELINE: Monat für Monat, Jan 2026 – Dez 2029 ──
+  // Vor 01.07.2026: alle Konten bei 0 (Startguthaben wird erst am 30.06.2026 eingebucht)
+  // Am 01.07.2026: Startguthaben einbuchen + Investitionen im Juli/August abbuchen
+  const STARTJAHR = 2026;
+  const STARTMO   = 7; // Juli = Monat der Gründung / Einzahlung
+
+  let giro = 0, biz = 0, tax = 0;
+  let vortrag = 0;
+  const timeline = [];
+  const allYrs = [2026, 2027, 2028, 2029];
+
+  for (const yr of allYrs) {
+    const R = calcAll(yr, vortrag);
+    vortrag = R.netto < 0 ? R.netto : 0;
+
+    // Betriebsbeginn: ab welchem Monat laufen Einnahmen?
+    // mo-Index: S[yr].ein.mo = aktive Monate → z.B. 4 = Sep-Dez → startMo = 9
+    const aktMo = S[yr].ein.mo || 12;
+    const einStartMo = 13 - aktMo; // 1-basiert: z.B. 4 Monate → Start September = 9
+
+    // Monatliche Beträge (Brutto für Ausgaben, Netto für Einnahmen)
+    const moEinNetto  = R.ein.moNetto;
+    const moEinBrutto = moEinNetto * 1.20;          // Brutto-Einnahmen auf Geschäftskonto
+    const moAusgBrutto = R.ausg.gesamt * 1.20;       // Betriebsausgaben Brutto vom Geschäftskonto
+    const moPriv      = (S[yr].privat||[]).reduce((s,r) => s+r.betrag, 0); // Privatausgaben vom Girokonto
+    const moSVS       = R.svs.monat;                 // Monatliche SVS-Rücklage
+    const moESt       = R.est.monat;                 // Monatliche ESt-Rücklage
+    const moSteuerRL  = moSVS + moESt;               // Gesamt Steuerrücklage (SVS + ESt)
+
+    for (let mo = 1; mo <= 12; mo++) {
+
+      // Startguthaben einbuchen: genau am Stichtag 30.06.2026 (= Ende Juni, also vor Juli-Buchungen)
+      if (yr === STARTJAHR && mo === STARTMO) {
+        giro += giroStart;
+        biz  += bizStart;
+        tax  += taxStart;
+      }
+
+      // Investitionen: Brutto-Abfluss vom Geschäftskonto im Kaufmonat
+      const invDiesenMonat = allAnlagen
+        .filter(a => a.yr === yr && a.mo === mo)
+        .reduce((s, a) => s + a.brutto, 0);
+      biz -= invDiesenMonat;
+
+      // Private Ausgaben: ab Gründungsmonat (Miete etc. unabhängig vom Betrieb)
+      const privatAktiv = (yr === STARTJAHR && mo >= STARTMO) || yr > STARTJAHR;
+      if (privatAktiv) {
+        giro -= moPriv;
+      }
+
+      // Laufender Betrieb: nur wenn aktiv
+      const active = (yr > STARTJAHR) || (yr === STARTJAHR && mo >= einStartMo);
+
+      if (active) {
+        // Geschäftskonto:
+        // + Brutto-Einnahmen
+        // − Brutto-Betriebsausgaben
+        // − Steuerrücklage (auf Steuerkonto)
+        // − Transfer an Girokonto (split der Netto-Einnahmen nach Abzug Ausgaben)
+        const ueberschuss = moEinNetto - R.ausg.gesamt; // Betriebs-Überschuss Netto
+        const transferGiro = Math.max(0, ueberschuss) * split; // 70% des Überschusses ans Giro
+
+        biz += moEinBrutto;          // Einnahmen rein (brutto)
+        biz -= moAusgBrutto;         // Ausgaben raus (brutto)
+        biz -= moSteuerRL;           // Steuerrücklage weg
+        biz -= transferGiro;         // Transfer ans Giro
+
+        tax  += moSteuerRL;          // Rücklage aufs Steuerkonto
+        giro += transferGiro;        // Zufluss vom Geschäftskonto
+        giro -= moPriv;              // Private Ausgaben vom Girokonto
+      }
+
+      timeline.push({
+        label: MO[mo-1] + ' ' + yr, yr, mo,
+        giro:  Math.round(giro),
+        biz:   Math.round(biz),
+        tax:   Math.round(tax),
+        invDiesenMonat: Math.round(invDiesenMonat),
+        active
+      });
+    }
+  }
+
+  // ── Ausgewählter Monat ──
+  const chosen = timeline.find(t => t.yr === selYr && t.mo === selMo) || timeline[0];
+  const totalChosen = chosen.giro + chosen.biz + chosen.tax;
+  const prevIdx = timeline.indexOf(chosen) - 1;
+  const prev = prevIdx >= 0 ? timeline[prevIdx] : null;
+
+  el('ks-preview').innerHTML =
+    `<div class="g3" style="margin-bottom:12px">
+      <div class="kpi">
+        <div class="kpi-lbl">Girokonto (Privat)</div>
+        <div class="kpi-val ${chosen.giro>=0?'g':'r'}">${fmtS(chosen.giro)}</div>
+        <div class="kpi-sub">${prev?'Vormonat: '+fmtS(prev.giro):''}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Geschäftskonto</div>
+        <div class="kpi-val ${chosen.biz>=0?'g':'r'}">${fmtS(chosen.biz)}</div>
+        <div class="kpi-sub">${prev?'Vormonat: '+fmtS(prev.biz):''}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Steuerkonto (SVS+ESt)</div>
+        <div class="kpi-val ${chosen.tax>=0?'g':'r'}">${fmtS(chosen.tax)}</div>
+        <div class="kpi-sub">${prev?'Vormonat: '+fmtS(prev.tax):''}</div>
+      </div>
+    </div>` +
+    row('Monat', MO[selMo-1]+' '+selYr + (chosen.active ? '' : ' · noch nicht aktiv'), 'd') +
+    (chosen.invDiesenMonat > 0 ? row('Investitionen diesen Monat (Brutto)', fmtS(chosen.invDiesenMonat), 'r') : '') +
+    row('Gesamt aller Konten', fmtS(totalChosen), totalChosen>=0?'g':'r', true) +
+    `<div style="margin-top:12px;font-size:10px;color:var(--d2);line-height:1.6">
+      Startguthaben eingebucht: 30.06.2026 · Einnahmen Brutto · Ausgaben Brutto · 
+      Steuerrücklage (SVS + ESt) ${fmtS(chosen.active ? (calcAll(selYr).svs.monat + calcAll(selYr).est.monat) : 0)}/Mo · 
+      Transfer Giro: ${Math.round(split*100)}% des Überschusses
+    </div>`;
+
+  // ── Chart ──
+  // Zeige nur ab Juli 2026 (wo Werte > 0 werden)
+  const chartData = timeline.filter(t => !(t.yr===2026 && t.mo<7));
+  mkChart('ch-ks','line',
+    chartData.map(t=>t.label),
+    [
+      {label:'Girokonto',     data:chartData.map(t=>t.giro), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.08)', fill:true, tension:.3, pointRadius:0},
+      {label:'Geschäftskonto',data:chartData.map(t=>t.biz),  borderColor:'#4ade80', backgroundColor:'transparent', tension:.3, pointRadius:0},
+      {label:'Steuerkonto',   data:chartData.map(t=>t.tax),  borderColor:'#fbbf24', backgroundColor:'transparent', tension:.3, pointRadius:0},
+    ]
+  );
+}
+
+
+// ═══════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════
+function exportData(){
+  const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='ricks_finanzplan.json';a.click();toast('↓ Exportiert');
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+initS();
+initIds();
+syncInputs();
+renderDash();
+
+</script>
+</body>
+</html>
